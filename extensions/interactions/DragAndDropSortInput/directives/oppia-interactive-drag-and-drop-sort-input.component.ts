@@ -85,11 +85,29 @@ export class InteractiveDragAndDropSortInputComponent implements OnInit {
     this.listSubscription.unsubscribe();
   }
 
-  setFocus(): void {
+  setFocus(groupIndex?: number, itemIndex?: number): void {
     if (!this.listItems) {
       return;
     }
-    this.listItems.toArray()[this.activeItem].nativeElement.focus();
+
+    if (groupIndex === undefined || itemIndex === undefined) {
+      const element = this.listItems.toArray()[this.activeItem];
+      if (element) {
+        element.nativeElement.focus();
+      }
+      return;
+    }
+
+    let flatIndex = 0;
+    for (let i = 0; i < groupIndex; i++) {
+      flatIndex += this.multipleItemsInSamePositionArray[i].length;
+    }
+    flatIndex += itemIndex;
+
+    const element = this.listItems.toArray()[flatIndex];
+    if (element) {
+      element.nativeElement.focus();
+    }
   }
 
   resetArray(): void {
@@ -189,46 +207,166 @@ export class InteractiveDragAndDropSortInputComponent implements OnInit {
     this.setFocus();
   }
 
-  handleKeyDown(event: KeyboardEvent, currentIndex: number): void {
+  handleKeyDown(
+    event: KeyboardEvent,
+    groupIndex: number,
+    currentIndex: number
+  ): void {
     let newIndex = currentIndex;
-    if (event.key === 'ArrowDown') {
-      event.preventDefault();
-      if (this.activeItem !== this.listItems.length - 1) {
-        newIndex += 1;
-        moveItemInArray(
-          this.singleItemInSamePositionArray,
-          currentIndex,
-          newIndex
-        );
+    let newGroupIndex = groupIndex;
+    if (!this.allowMultipleItemsInSamePosition) {
+      if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        if (this.activeItem !== this.listItems.length - 1) {
+          newIndex += 1;
+          moveItemInArray(
+            this.singleItemInSamePositionArray,
+            currentIndex,
+            newIndex
+          );
+        }
+      } else if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        if (this.activeItem !== 0) {
+          newIndex -= 1;
+          moveItemInArray(
+            this.singleItemInSamePositionArray,
+            currentIndex,
+            newIndex
+          );
+        }
+      } else if (event.key === 'Tab') {
+        event.preventDefault();
+        if (event.shiftKey) {
+          if (this.activeItem > 0) {
+            newIndex -= 1;
+          }
+        } else {
+          if (this.activeItem < this.listItems.length - 1) {
+            newIndex += 1;
+          }
+        }
       }
+      this.activeItem = newIndex;
+      this.setFocus();
+      return;
     }
-    if (event.key === 'ArrowUp') {
-      event.preventDefault();
-      if (this.activeItem !== 0) {
-        newIndex -= 1;
-        moveItemInArray(
-          this.singleItemInSamePositionArray,
-          currentIndex,
-          newIndex
-        );
+
+    const isArrowDown = event.key === 'ArrowDown';
+    const isArrowUp = event.key === 'ArrowUp';
+
+    if (!isArrowDown && !isArrowUp) {
+      return;
+    }
+    event.preventDefault();
+
+    if (
+      (isArrowDown &&
+        newGroupIndex === this.multipleItemsInSamePositionArray.length - 2 &&
+        this.multipleItemsInSamePositionArray[newGroupIndex + 1].length === 0 &&
+        this.multipleItemsInSamePositionArray[newGroupIndex].length <= 1) ||
+      (isArrowUp &&
+        newGroupIndex === 1 &&
+        this.multipleItemsInSamePositionArray[newGroupIndex - 1].length === 0 &&
+        this.multipleItemsInSamePositionArray[newGroupIndex].length <= 1)
+    ) {
+      return;
+    }
+
+    const currentGroup = this.multipleItemsInSamePositionArray[newGroupIndex];
+
+    if (currentGroup.length > 1) {
+      if (isArrowDown && currentIndex < currentGroup.length - 1) {
+        moveItemInArray(currentGroup, currentIndex, currentIndex + 1);
+        newIndex++;
+      } else if (isArrowUp && currentIndex > 0) {
+        moveItemInArray(currentGroup, currentIndex, currentIndex - 1);
+        newIndex--;
+      } else {
+        const movingItem = currentGroup.splice(currentIndex, 1);
+        if (isArrowDown) {
+          this.multipleItemsInSamePositionArray.splice(
+            newGroupIndex + 1,
+            0,
+            movingItem
+          );
+          this.multipleItemsInSamePositionArray.splice(
+            newGroupIndex + 2,
+            0,
+            []
+          );
+          newGroupIndex++;
+        } else {
+          this.multipleItemsInSamePositionArray.splice(
+            newGroupIndex,
+            0,
+            movingItem
+          );
+          this.multipleItemsInSamePositionArray.splice(
+            newGroupIndex + 1,
+            0,
+            []
+          );
+        }
+        newIndex = 0;
+      }
+    } else if (currentGroup.length === 1) {
+      const targetIndex = isArrowDown ? newGroupIndex + 1 : newGroupIndex - 1;
+      moveItemInArray(
+        this.multipleItemsInSamePositionArray,
+        newGroupIndex,
+        targetIndex
+      );
+      newGroupIndex = targetIndex;
+      const mergeIndex = isArrowDown ? newGroupIndex + 1 : newGroupIndex - 1;
+
+      if (
+        mergeIndex >= 0 &&
+        mergeIndex < this.multipleItemsInSamePositionArray.length &&
+        this.multipleItemsInSamePositionArray[mergeIndex].length > 0
+      ) {
+        const movingItems =
+          this.multipleItemsInSamePositionArray[newGroupIndex].splice(0);
+        if (isArrowDown) {
+          this.multipleItemsInSamePositionArray[mergeIndex].unshift(
+            ...movingItems
+          );
+        } else {
+          this.multipleItemsInSamePositionArray[mergeIndex].push(
+            ...movingItems
+          );
+        }
+        this.multipleItemsInSamePositionArray.splice(newGroupIndex, 1);
+        newGroupIndex = mergeIndex;
       }
     }
 
-    if (event.key === 'Tab') {
-      if (event.shiftKey) {
-        if (this.activeItem > 0) {
-          event.preventDefault();
-          newIndex -= 1;
-        }
-      } else {
-        if (this.activeItem < this.listItems.length - 1) {
-          event.preventDefault();
-          newIndex += 1;
-        }
-      }
-    }
-    this.activeItem = newIndex;
-    this.setFocus();
+    this.multipleItemsInSamePositionArray =
+      this.multipleItemsInSamePositionArray.reduce<string[][]>(
+        (acc, group) => {
+          if (group.length) {
+            acc.push(group);
+            acc.push([]);
+          }
+          return acc;
+        },
+        [[]]
+      );
+
+    newGroupIndex = Math.max(
+      0,
+      Math.min(newGroupIndex, this.multipleItemsInSamePositionArray.length - 1)
+    );
+    newIndex = Math.max(
+      0,
+      Math.min(
+        newIndex,
+        this.multipleItemsInSamePositionArray[newGroupIndex]?.length - 1
+      )
+    );
+    this.activeItem = newGroupIndex;
+    this.setFocus(newGroupIndex, newIndex);
+    return;
   }
 
   hideElement(event: CdkDragExit<string[]>): void {

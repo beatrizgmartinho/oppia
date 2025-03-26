@@ -533,7 +533,7 @@ describe('Drag and drop sort input interactive component', () => {
     ];
     spyOn(component, 'setFocus');
 
-    component.handleKeyDown(event, currentIndex);
+    component.handleKeyDown(event, 0, currentIndex);
 
     expect(component.setFocus).toHaveBeenCalled();
     expect(component.activeItem).toBe(currentIndex + 1);
@@ -556,7 +556,7 @@ describe('Drag and drop sort input interactive component', () => {
     ];
     spyOn(component, 'setFocus');
 
-    component.handleKeyDown(event, currentIndex);
+    component.handleKeyDown(event, 0, currentIndex);
 
     expect(component.setFocus).toHaveBeenCalled();
     expect(component.activeItem).toBe(currentIndex - 1);
@@ -568,7 +568,7 @@ describe('Drag and drop sort input interactive component', () => {
     component.activeItem = 1;
     spyOn(component, 'setFocus');
 
-    component.handleKeyDown(event, currentIndex);
+    component.handleKeyDown(event, 0, currentIndex);
 
     expect(component.setFocus).toHaveBeenCalled();
     expect(component.activeItem).toBe(currentIndex - 1);
@@ -586,7 +586,7 @@ describe('Drag and drop sort input interactive component', () => {
     ]);
 
     spyOn(component, 'setFocus');
-    component.handleKeyDown(event, currentIndex);
+    component.handleKeyDown(event, 0, currentIndex);
     expect(component.setFocus).toHaveBeenCalled();
     expect(component.activeItem).toBe(currentIndex + 1);
   });
