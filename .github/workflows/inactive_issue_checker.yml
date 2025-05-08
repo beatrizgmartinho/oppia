@@ -2,7 +2,7 @@ name: Check Inactive Issues
 on:
   schedule:
     # Each midnight.
-    - cron: '0 0 * * *'
+    #- cron: '0 0 * * *'
   # GitHub doesn't provide assurance that the scheduled jobs will run on time
   # (see https://github.community/t/no-assurance-on-scheduled-jobs/133753).
   # So, we add the workflow_dispatch event here to allow triggering this
